@@ -1,8 +1,9 @@
+import logging
+
+import cv2
 import matplotlib.image as mpimg
 import numpy as np
-import cv2
 from skimage.feature import hog
-import logging
 
 
 def convert_color(img, conv='RGB2YCrCb'):
@@ -37,8 +38,13 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block,
         return features
 
 
-# Define a function to compute binned color features
 def bin_spatial(img, size=(32, 32)):
+    """
+    Define a function to compute binned color features
+    :param img: image
+    :param size: image size
+    :return:
+    """
     # Use cv2.resize().ravel() to create the feature vector
     features = cv2.resize(img, size).ravel()
     # Return the feature vector
@@ -60,17 +66,30 @@ def color_hist(img, nbins=32, bins_range=(0, 256)):
 
 # Define a function to extract features from a list of images
 # Have this function call bin_spatial() and color_hist()
-def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
-                     hist_bins=32, orient=9,
-                     pix_per_cell=8, cell_per_block=2, hog_channel=0,
-                     spatial_feat=True, hist_feat=True, hog_feat=True):
+def extract_features(imgs, feature_extra_param):
+    """
+    :param imgs: 图像数组 Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+    :param feature_extra_param:
+    :return:
+    """
+    color_space = feature_extra_param['color_space']
+    spatial_size = feature_extra_param['spatial_size']
+    hist_bins = feature_extra_param['hist_bins']
+    orient = feature_extra_param['orient']
+    pix_per_cell = feature_extra_param['pix_per_cell']
+    cell_per_block = feature_extra_param['cell_per_block']
+    hog_channel = feature_extra_param['hog_channel']
+    spatial_feat = feature_extra_param['spatial_feat']
+    hist_feat = feature_extra_param['hist_feat']
+    hog_feat = feature_extra_param['hog_feat']
+
     # Create a list to append feature vectors to
     features = []
     # Iterate through the list of images
     count = 0
     for file in imgs:
         if count % 500 == 0:
-            logging.debug("handle {} data. ".format(count))
+            logging.info("handle {} data. ".format(count))
         count += 1
         file_features = []
         # Read in each one by one
@@ -93,10 +112,12 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
         if spatial_feat == True:
             spatial_features = bin_spatial(feature_image, size=spatial_size)
             file_features.append(spatial_features)
+
         if hist_feat == True:
             # Apply color_hist()
             hist_features = color_hist(feature_image, nbins=hist_bins)
             file_features.append(hist_features)
+
         if hog_feat == True:
             # Call get_hog_features() with vis=False, feature_vec=True
             if hog_channel == 'ALL':
