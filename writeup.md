@@ -123,7 +123,7 @@ But the small image of a car could never appear there. So I decide to use scale 
 ### Video Implementation
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link of my final video](https://github.com/jacks808/Vehicle-Detection/blob/master/out_1529765713.436998.mp4)
 
 
 
