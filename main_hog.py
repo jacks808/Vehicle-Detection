@@ -16,8 +16,9 @@ logging.basicConfig(level=logging.INFO,
                     filemode='w')
 
 # define params:
-mode = 'pipeline'
+mode = 'test'
 mode = 'train'
+mode = 'pipeline'
 
 MODEL_PICKLE = './model.pickle'
 
@@ -33,7 +34,6 @@ feature_extra_param = {
     'hist_feat': True,  # Histogram features on or off
     'hog_feat': True,  # HOG features on or off
     'y_start_stop': [400, 600],  # Min and max in y to search in slide_window()
-    'scale': 1.5
 }
 
 
@@ -196,7 +196,6 @@ def find_cars(img, svc, X_scaler, feature_extra_param, scale):
     """
     ystart = convert2int(feature_extra_param['y_start_stop'][0])
     ystop = convert2int(feature_extra_param['y_start_stop'][1])
-    # scale = feature_extra_param['scale']
     orient = feature_extra_param['orient']
     pix_per_cell = feature_extra_param['pix_per_cell']
     cell_per_block = feature_extra_param['cell_per_block']
@@ -242,8 +241,9 @@ def find_cars(img, svc, X_scaler, feature_extra_param, scale):
 
     for xb in range(nxsteps):  # slide window with x
         for yb in range(nysteps):  # slide window with y
-            ypos = yb * cells_per_step
             xpos = xb * cells_per_step
+            ypos = yb * cells_per_step
+
             # Extract HOG for this patch
             hog_feat1 = hog1[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
             hog_feat2 = hog2[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
@@ -264,8 +264,6 @@ def find_cars(img, svc, X_scaler, feature_extra_param, scale):
             # Scale features and make a prediction
             feature = np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1)
             test_features = X_scaler.transform(feature)  # feature.shape: 1, 6108
-
-            # test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))
             test_prediction = svc.predict(test_features)
 
             if test_prediction == 1:
@@ -304,13 +302,17 @@ def draw_labeled_bboxes(img, labels):
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
         nonzero = (labels[0] == car_number).nonzero()
+
         # Identify x and y values of those pixels
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
+
         # Define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+
         # Draw the box on the image
         cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+
     # Return the image
     return img
 
@@ -333,15 +335,14 @@ def process_image(image):
     heat = add_heat(heat, final_box_list)
 
     # Apply threshold to help remove false positives
-    threshold = 4
+    threshold = 1
     heat = apply_threshold(heat, threshold)
 
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
 
     # Find final boxes from heatmap using label function
-    labels = label(heatmap)
-    draw_img = draw_labeled_bboxes(np.copy(image), labels)
+    draw_img = draw_labeled_bboxes(np.copy(image), label(heatmap))
 
     return draw_img
 
@@ -362,7 +363,41 @@ if __name__ == '__main__':
             X_scaler = pickle.load(file)
 
         # output processed image
-        # clip1 = VideoFileClip(filename="./project_video.mp4").subclip(9, 10)
-        clip1 = VideoFileClip(filename="./project_video.mp4").subclip(40, 42)
+        clip1 = VideoFileClip(filename="./project_video.mp4")#.subclip(9, 10)
         white_clip = clip1.fl_image(process_image)
         white_clip.write_videofile("./out_{}.mp4".format(time.time()), audio=False)
+
+    elif mode == 'test':
+        cars, not_cars = load_training_images()
+        car_file = cars[3]
+        car = mpimg.imread(car_file)
+
+        not_car_file = not_cars[3]
+        not_car = mpimg.imread(not_car_file)
+
+        features, car_hog_image = get_hog_features(car, feature_extra_param['orient'], feature_extra_param['pix_per_cell'],
+                                                   feature_extra_param['cell_per_block'], vis=True, feature_vec=True)
+
+        features, not_car_hog_image = get_hog_features(not_car, feature_extra_param['orient'], feature_extra_param['pix_per_cell'],
+                                                   feature_extra_param['cell_per_block'], vis=True, feature_vec=True)
+
+        plt.subplot(221)
+        plt.imshow(car)
+        plt.title('Car image')
+
+        plt.subplot(222)
+        plt.imshow(car_hog_image)
+        plt.title('Car hog image')
+
+        plt.subplot(223)
+        plt.imshow(not_car)
+        plt.title('Not car image')
+
+        plt.subplot(224)
+        plt.imshow(not_car_hog_image)
+        plt.title('Not car hot image')
+
+        plt.show()
+
+        # show_image(features)
+        # show_image(hog_image)

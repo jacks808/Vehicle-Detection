@@ -38,41 +38,87 @@ You're reading it!
 
 #### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
-The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
+The code for this step is contained in the[`main_hog.py`](https://github.com/jacks808/Vehicle-Detection/blob/master/main_hog.py) .  
 
 I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
-![alt text][image1]
+![](https://ws4.sinaimg.cn/large/006tKfTcly1fsl84dau35j310g0pyago.jpg)
 
 I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
-Here is an example using the `YCrCb` color space and HOG parameters of `orientations=8`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
 
 
-![alt text][image2]
+Here is an example using the `YCrCb` color space and HOG parameters of `orientations=9`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+
+![](https://ws3.sinaimg.cn/large/006tKfTcly1fsl8mwd110j30zy0ugaix.jpg)
 
 #### 2. Explain how you settled on your final choice of HOG parameters.
 
-I tried various combinations of parameters and...
+I tried various combinations of parameters and final choose this parameter: 
+
+```python
+'color_space': 'YCrCb',  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+'orient': 9,  # HOG orientations
+'pix_per_cell': 8,  # HOG pixels per cell
+'cell_per_block': 2,  # HOG cells per block
+'hog_channel': 'ALL',  # Can be 0, 1, 2, or "ALL"
+'spatial_size': (32, 32),  # Spatial binning dimensions
+'hist_bins': 16,  # Number of histogram bins
+'spatial_feat': True,  # Spatial features on or off
+'hist_feat': True,  # Histogram features on or off
+'hog_feat': True,  # HOG features on or off
+```
+
+which is shown at [here](https://github.com/jacks808/Vehicle-Detection/blob/master/main_hog.py#L24)
+
+because use this parmeter, the `svm` will get the best predict accuracy: `99.21%`
+
+![](https://ws2.sinaimg.cn/large/006tKfTcly1fsl8w1faomj30ee030t9i.jpg)
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-I trained a linear SVM using...
+I trained a linear SVM using a lot of feature as shown bellow:
+
+1. color_space: 'YCrCb'
+2. spatial feature with spatil size: `(32, 32)`
+3. hist feature with hist_bins: `16`
+4. hog feature with all `RGB` channel, and `orient = 9` , `pix_per_cell = 8`, `cell_per_block = 2`
+
+ps: all of this code can be found at: `extract_features` function in `lesson_functions.py`
 
 ### Sliding Window Search
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+I use the slide window code that provided by Udacity. And I decided to search window positions at height `400` to `600`, and  `1.5 scale` , use this subimage to search cars and came up with this :
 
-![alt text][image3]
+![image-20180623174233367](https://ws2.sinaimg.cn/large/006tKfTcly1fsl94nfgpxj31kw0yfhdu.jpg)
+
+May be there is some bug of my `svc`. After fix that. I got this :
+
+![image-20180623174400422](https://ws4.sinaimg.cn/large/006tKfTcly1fsl9643o1dj31kw0yfe82.jpg)
+
+The `svc` can classify the car, but there is to many window there. So I decide to add `heat map ` to fix this, here is how the heat map work:
+
+1. Find all boxes in a image that contains a car
+2. Calcluate all box heat value
+3. only output the heat greater than threshold boxes
+
+Here is the code:
+
+![image-20180623174721564](https://ws3.sinaimg.cn/large/006tKfTcly1fsl99lbj6qj317e0kmwj9.jpg)
 
 #### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+![image-20180623174956348](https://ws2.sinaimg.cn/large/006tKfTcly1fsl9cafftkj31kw0w07wi.jpg)
 
-![alt text][image4]
----
+I choose differnt `scale` from `0.5` to `3.0` , but I found that if the window is too small. the classifier will get a lot of wrong window such as:
+
+![image-20180623180454121](https://ws3.sinaimg.cn/large/006tKfTcly1fsl9rurl6qj31kw0w0b2a.jpg)
+
+But the small image of a car could never appear there. So I decide to use scale `1.0` and `1.5`to find cars. There is a benefit of choose that value:
+
+> Less image: because only use 1.0 and 1.5  scale to search cars, The amount of calculation is less than scale : `0.5`, `1.0`, `1.5`, `2.0`, `2.5`
 
 ### Video Implementation
 
@@ -80,23 +126,39 @@ Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spat
 Here's a [link to my video result](./project_video.mp4)
 
 
+
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+I use `MoviePy` to handle video data:
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+```python
+# output processed image
+clip1 = VideoFileClip(filename="./project_video.mp4")
+white_clip = clip1.fl_image(process_image)
+white_clip.write_videofile("./out_{}.mp4".format(time.time()), audio=False)
+```
 
-### Here are six frames and their corresponding heatmaps:
+Here is the `process_image` function: 
 
-![alt text][image5]
+![image-20180624112421097](https://ws4.sinaimg.cn/large/006tNc79ly1fsm3tfmjtfj317g0u0wku.jpg)
 
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
+First of all, I use `svc` to find all possible car bonding box in different scale value. Line: 328~331
 
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
+![image-20180624112705131](https://ws3.sinaimg.cn/large/006tNc79ly1fsm3w8glfgj31kw0yfe82.jpg)
 
+Use heat map to find out where is the most possible position of a car. Line: 334~335
 
+![image-20180624112729702](https://ws4.sinaimg.cn/large/006tNc79ly1fsm3wmwspjj310m0s075n.jpg)
+
+Apply threshold to filter only appear once car image
+
+![image-20180624112748199](https://ws1.sinaimg.cn/large/006tNc79ly1fsm3wyomlqj310a0rgabe.jpg)
+
+Finally use  `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.
+
+Line: 345
+
+![image-20180624112837974](https://ws3.sinaimg.cn/large/006tNc79ly1fsm3xtpyq7j31080rah16.jpg)
 
 ---
 
