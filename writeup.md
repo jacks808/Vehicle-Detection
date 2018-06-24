@@ -168,3 +168,8 @@ Line: 345
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
+* I use Macbook pro to handle this video, but the speed of `process_iamge` is very slow. It take 1 second to process one frame image. process whole video need about 20 minutes. I think there is some problem on the slide window code. I learn some about `YOLO` . Maybe change slide window to `yolo` can make this speed up. 
+* Although `Hog` + `SVM` work very well. But I still want to try some `CNNs` such as `AlexNet`, `ResNet`, `GoogLeNet`.
+* Add more data. From now on. all of the data is provide by Udacity, But there is many weather, Rain, Cloud, Snow. Different weather means different light condition. Not only weather but also the time of a day make a huge different of the light condition. So maybe I need more data. 
+
+I beleve after doing that. My code will be more robust. 
